@@ -11,7 +11,8 @@ export function generateModuleSource(
     depth: string,
     exportsArgument: string,
     afterModule: string,
-    renderableOnly = false
+    renderableOnly = false,
+    useAsConst = false
 ): string {
     const { exports, meta } = stylableResult;
     const localsExports = JSON.stringify(exports);
@@ -22,11 +23,11 @@ export function generateModuleSource(
     return `
 ${beforeModule.join('\n')}
 ${exportsArgument} = ${createFunction}(
-    ${namespace},
-    ${localsExports},
+    ${namespace}${useAsConst ? ' as const' : ''},
+    ${localsExports} ${useAsConst ? ' as const' : ''},
     ${css},
     ${depth},
-    ${moduleId},
+    ${moduleId} ${useAsConst ? ' as const' : ''},
     ${renderer}
 );
 ${afterModule}
@@ -58,7 +59,7 @@ export function createModuleSource(
     switch (moduleFormat) {
         case 'dts':
             return generateTypescriptDefinition();
-        case 'esm': {
+        case '  ': {
             const importKey = renderableOnly ? 'createRenderable' : 'create';
             return generateModuleSource(
                 stylableResult,
@@ -72,12 +73,35 @@ export function createModuleSource(
                 `createRenderable`,
                 cssString,
                 depth,
-                'const { classes, keyframes, vars, stVars, cssStates, style, st, $depth, $id, $css }', // = $
+                'const { classes, keyframes, vars, stVars, cssStates, namespace, style, st, $depth, $id, $css }', // = $
                 [
-                    `export { classes, keyframes, vars, stVars, cssStates, style, st, $depth, $id, $css };`,
+                    `export { classes, keyframes, vars, stVars, cssStates, namespace, style, st, $depth, $id, $css };`,
                     ...afterModule,
                 ].join('\n'),
                 renderableOnly
+            );
+        }
+        case 'ts': {
+            const importKey = renderableOnly ? 'createRenderable' : 'create';
+            return generateModuleSource(
+                stylableResult,
+                moduleId,
+                [
+                    ...staticRequests.map((request) => `import ${JSON.stringify(request)}`),
+                    `import { $, ${importKey} } from ${JSON.stringify(runtimeRequest)}`,
+                ],
+                `$`,
+                `create`,
+                `createRenderable`,
+                cssString,
+                depth,
+                'const { classes, keyframes, vars, stVars, cssStates, namespace, style, st, $depth, $id, $css }', // = $
+                [
+                    `export  { classes, keyframes, vars, stVars, cssStates, namespace, style, st, $depth, $id, $css };`,
+                    ...afterModule,
+                ].join('\n'),
+                renderableOnly,
+                true
             );
         }
         case 'cjs':
@@ -96,6 +120,24 @@ export function createModuleSource(
                 'module.exports',
                 afterModule.join('\n'),
                 renderableOnly
+            );
+            case 'ts-cjs':
+            return generateModuleSource(
+                stylableResult,
+                moduleId,
+                [
+                    ...staticRequests.map((request) => `require(${JSON.stringify(request)})`),
+                    `import runtime = require(${JSON.stringify(runtimeRequest)})`,
+                ],
+                `runtime.$`,
+                `runtime.create`,
+                `runtime.createRenderable`,
+                cssString,
+                depth,
+                'export ',
+                afterModule.join('\n'),
+                renderableOnly, 
+                true
             );
     }
     throw new Error('Unknown module format ' + moduleFormat);

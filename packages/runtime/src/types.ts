@@ -14,12 +14,12 @@ export interface InheritedAttributes {
     [props: string]: any;
 }
 
-export interface StylableExports {
-    classes: Record<string, string>;
-    keyframes: Record<string, string>;
-    vars: Record<string, string>;
-    stVars: Record<string, string>;
-}
+export type StylableExports = StylableExportsBase<
+    Record<string, string>,
+    Record<string, string>,
+    Record<string, string>,
+    Record<string, string>
+>;
 
 export type STFunction = (
     context: string,
@@ -27,12 +27,38 @@ export type STFunction = (
     ...classes: Array<string | undefined>
 ) => string;
 
-export interface RuntimeStylesheet extends StylableExports, RenderableStylesheet {
-    namespace: string;
+export interface StylableExportsBase<
+    CLASSES extends Record<string, string>,
+    KEYFRAMES extends Record<string, string>,
+    VARS extends Record<string, string>,
+    ST_VARS extends Record<string, string>
+> {
+    classes: CLASSES;
+    keyframes: KEYFRAMES;
+    vars: VARS;
+    stVars: ST_VARS;
+}
+
+export interface RuntimeStylesheetBase<
+    NAMESPACE,
+    CLASSES extends Record<string, string>,
+    KEYFRAMES extends Record<string, string>,
+    VARS extends Record<string, string>,
+    ST_VARS extends Record<string, string>
+> extends StylableExportsBase<CLASSES, KEYFRAMES, VARS, ST_VARS>, RenderableStylesheet {
+    namespace: NAMESPACE;
     cssStates: (stateMap: StateMap) => string;
     style: STFunction;
     st: STFunction;
 }
+
+export type RuntimeStylesheet = RuntimeStylesheetBase<
+    string,
+    Record<string, string>,
+    Record<string, string>,
+    Record<string, string>,
+    Record<string, string>
+>;
 
 export interface NodeRenderer<I, O extends Element> {
     update(stylesheet: I, node: O): O;

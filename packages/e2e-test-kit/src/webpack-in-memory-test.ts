@@ -13,11 +13,11 @@ const content = readdirSync(runtimeDir).map((f) => {
     };
 });
 
-export function createMemoryFileSystemWithFiles(files: { [fullpath: string]: string }) {
+export function createMemoryFileSystemWithFiles(files: { [fullpath: string]: string }, resolvePath = resolve) {
     const memfs = memoryFS();
 
     for (const k in files) {
-        const r = resolve(k);
+        const r = resolvePath(k);
         memfs.mkdirpSync(dirname(r));
         memfs.writeFileSync(r, files[k] || '\n');
     }
